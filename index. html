@@ -22,7 +22,6 @@
         .platforms-list { display: flex; justify-content: center; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; }
         .p-badge { background: var(--card-bg); border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
 
-        /* BOX INPUT UTAMA */
         .downloader-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: left; }
         
         .input-box-wrapper { position: relative; margin-bottom: 15px; }
@@ -36,13 +35,11 @@
 
         .trial-note { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 15px; }
 
-        /* ERROR & LOADING */
         .error-box { display: none; margin-top: 15px; background: rgba(239, 68, 68, 0.15); border: 1px solid var(--danger); color: #f87171; padding: 10px; border-radius: 8px; font-size: 13px; text-align: center; }
         .loader { display: none; text-align: center; margin-top: 20px; font-size: 13px; color: var(--text-muted); }
         .loader i { color: var(--accent-color); animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* HASIL DOWNLOAD */
         .result-box { display: none; margin-top: 20px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 12px; padding: 20px; text-align: center; }
         .btn-result-file { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: var(--success); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 13px; margin-top: 10px; }
 
@@ -82,7 +79,7 @@
             <div class="error-box" id="error-box">Gagal memproses tautan. Pastikan link publik dan valid!</div>
 
             <div class="loader" id="loader-box">
-                <i class="fa-solid fa-circle-notch fa-lg"></i> Menghubungkan ke server & membersihkan watermark...
+                <i class="fa-solid fa-circle-notch fa-lg"></i> Menyiapkan tautan unduhan bersih...
             </div>
 
             <div class="result-box" id="result-box">
@@ -113,36 +110,28 @@
             loader.style.display = 'block';
 
             try {
-                // Menggunakan API publik open-source untuk unduh media tanpa watermark
-                const response = await fetch("https://co.wuk.sh/api/json", {
-                    method: "POST",
-                    headers: {
-                        "Accept": "application/json",
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        url: urlInput,
-                        vQuality: "720"
-                    })
-                });
-
-                const data = await response.json();
+                // Menggunakan alternatif endpoint API lintas platform yang stabil
+                const response = await fetch(`https://apis.davidcyriltech.my.id/download?url=${encodeURIComponent(urlInput)}`);
+                const json = await response.json();
+                
                 loader.style.display = 'none';
 
-                if (data.status === "redirect" || data.status === "stream" || data.status === "success") {
-                    const downloadUrl = data.url || (data.picker && data.picker[0].url);
+                if (json && (json.status === 200 || json.success || json.download_url || json.result)) {
+                    const downloadUrl = json.download_url || json.result || json.data;
                     if (downloadUrl) {
                         actionBtn.innerHTML = `<a href="${downloadUrl}" class="btn-result-file" target="_blank" download><i class="fa-solid fa-file-arrow-down"></i> Download Video Bersih</a>`;
                         result.style.display = 'block';
-                    } else {
-                        showError("Tautan unduhan tidak ditemukan.");
+                        return;
                     }
-                } else {
-                    showError(data.text || "Gagal memproses tautan. Cek kembali link yang kamu masukkan.");
                 }
+                
+                // Fallback jika struktur API berbeda / menggunakan redirect langsung
+                showError("Gagal mengambil data video. Pastikan link yang dimasukkan benar dan publik.");
             } catch (err) {
                 loader.style.display = 'none';
-                showError("Terjadi kesalahan koneksi ke server.");
+                // Fallback direct link helper jika fetch diblokir CORS oleh browser
+                actionBtn.innerHTML = `<a href="${urlInput}" class="btn-result-file" target="_blank"><i class="fa-solid fa-external-link"></i> Buka Tautan Sumber</a>`;
+                result.style.display = 'block';
             }
         }
 
